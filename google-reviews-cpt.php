@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
 }
 // Enable automatic updates from GitHub
 require __DIR__ . '/plugin-update-checker/plugin-update-checker.php';
-use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+use YahnisElsts\PluginUpdateChecker\v5p4\PucFactory;
 
 $myUpdateChecker = PucFactory::buildUpdateChecker(
     'https://github.com/thebusinesstoolkitdev/google-reviews-cpt/',
@@ -421,6 +421,7 @@ register_deactivation_hook(__FILE__, function() {
     flush_rewrite_rules();
 
 });
+
 
 
 
