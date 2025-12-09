@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 // Enable automatic updates from GitHub
-require 'plugin-update-checker/plugin-update-checker.php';
+require __DIR__ . '/plugin-update-checker/plugin-update-checker.php';
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
 $myUpdateChecker = PucFactory::buildUpdateChecker(
@@ -421,6 +421,7 @@ register_deactivation_hook(__FILE__, function() {
     flush_rewrite_rules();
 
 });
+
 
 
 
