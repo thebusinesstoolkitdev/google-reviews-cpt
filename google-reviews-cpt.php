@@ -11,23 +11,22 @@
  * Requires PHP: 7.4
  */
 
+// Exit if accessed directly
+if (!defined('ABSPATH')) {
+    exit;
+}
 // Enable automatic updates from GitHub
 require 'plugin-update-checker/plugin-update-checker.php';
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
 $myUpdateChecker = PucFactory::buildUpdateChecker(
-    'https://github.com/yourusername/google-reviews-cpt/',
+    'https://github.com/thebusinesstoolkitdev/google-reviews-cpt/',
     __FILE__,
     'google-reviews-cpt'
 );
 
 // Set the branch for updates
 $myUpdateChecker->setBranch('main');
-
-// Exit if accessed directly
-if (!defined('ABSPATH')) {
-    exit;
-}
 
 class Google_Reviews_CPT {
     
@@ -422,5 +421,6 @@ register_deactivation_hook(__FILE__, function() {
     flush_rewrite_rules();
 
 });
+
 
 
