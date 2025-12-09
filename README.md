@@ -24,7 +24,7 @@ This plugin automatically syncs Google reviews and stores each review as a WordP
 ## 📦 Installation
 
 ### Automatic Installation
-1. Download the [latest release](https://github.com/yourusername/google-reviews-cpt/releases)
+1. Download the [latest release](https://github.com/thebusinesstoolkitdev/google-reviews-cpt/releases)
 2. Go to WordPress Admin → Plugins → Add New → Upload Plugin
 3. Choose the downloaded zip file
 4. Click "Install Now" and then "Activate"
@@ -125,7 +125,7 @@ Absolutely! Since reviews are stored as CPTs, you have 100% design control using
 
 ## 🐛 Support
 
-For issues and feature requests, please use the [GitHub Issues](https://github.com/yourusername/google-reviews-cpt/issues) page.
+For issues and feature requests, please use the [GitHub Issues](https://github.com/thebusinesstoolkitdevgoogle-reviews-cpt/issues) page.
 
 ## 🤝 Contributing
 
