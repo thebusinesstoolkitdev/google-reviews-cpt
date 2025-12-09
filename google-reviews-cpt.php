@@ -10,70 +10,7 @@
  * Requires at least: 5.0
  * Requires PHP: 7.4
  */
-// Enable automatic updates from GitHub
-require 'plugin-update-checker/plugin-update-checker.php';
-use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
-$myUpdateChecker = PucFactory::buildUpdateChecker(
-    'https://github.com/yourusername/google-reviews-cpt/',
-    __FILE__,
-    'google-reviews-cpt'
-);
-
-// Set the branch for updates
-$myUpdateChecker->setBranch('main');
-
-// Optional: If your repository is private
-// $myUpdateChecker->setAuthentication('your-token-here');
-```
-
-### Step 3: Create Releases as Normal
-
-When you create a new release on GitHub, WordPress will automatically detect it!
-
-**Users see:**
-- "Update available" notification in WordPress
-- Can update with one click
-- Just like WordPress.org plugins!
-
----
-
-## Option 4: Submit to WordPress.org (Most Professional)
-
-### Advantages:
-✅ Automatic updates for all users
-✅ Searchable in WordPress admin
-✅ More credibility and trust
-✅ Larger audience reach
-
-### Process:
-1. Submit plugin to WordPress.org
-2. Wait for approval (1-2 weeks)
-3. Use SVN to push updates
-4. Updates happen automatically
-
-**But:** You can keep GitHub as your development repo and push to WordPress.org for releases.
-
----
-
-## My Recommendation for You
-
-Start with **Option 2** (GitHub Updater):
-
-### Why?
-- ✅ Easy for you to maintain
-- ✅ Professional auto-updates for users
-- ✅ No complex code changes
-- ✅ Just add 2 lines to plugin header
-- ✅ Users install one helper plugin
-
-### Your Update Workflow:
-```
-1. Edit code in your plugin
-2. Commit to GitHub (web or locally)
-3. Update version number
-4. Create new release with tag
-5. Users get notified automatically!
 // Exit if accessed directly
 if (!defined('ABSPATH')) {
     exit;
