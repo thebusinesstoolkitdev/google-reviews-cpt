@@ -34,6 +34,12 @@ This plugin automatically syncs Google reviews and stores each review as a WordP
 2. Extract and upload to `/wp-content/plugins/google-reviews-cpt/`
 3. Activate through WordPress admin
 
+## 🔄 Automatic Updates
+
+This plugin supports automatic updates! When a new version is released, you'll see an update notification in your WordPress dashboard.
+
+Simply click "Update Now" to get the latest version - just like WordPress.org plugins!
+
 ## ⚙️ Requirements
 
 - WordPress 5.0 or higher
