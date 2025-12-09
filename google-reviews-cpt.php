@@ -3,7 +3,7 @@
  * Plugin Name: Google Reviews to CPT
  * Plugin URI: https://github.com/thebusinesstoolkitdev/google-reviews-cpt
  * Description: Fetches Google reviews via API and stores them as Custom Post Types, compatible with all major page builders (Bricks, Elementor, Greenshift, Oxygen, etc.)
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: The Business Toolkit
  * GitHub Plugin URI: thebusinesstoolkitdev/google-reviews-cpt
  * GitHub Branch: main
@@ -422,4 +422,5 @@ register_deactivation_hook(__FILE__, function() {
     flush_rewrite_rules();
 
 });
+
 
