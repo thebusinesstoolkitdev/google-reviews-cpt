@@ -16,11 +16,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/*
-// TEMPORARILY DISABLED FOR DEBUGGING
 // Enable automatic updates from GitHub
 require __DIR__ . '/plugin-update-checker/plugin-update-checker.php';
-use YahnisElsts\PluginUpdateChecker\v5p4\PucFactory;
+use YahnisElsts\PluginUpdateChecker\v5p6\PucFactory;
 
 $myUpdateChecker = PucFactory::buildUpdateChecker(
     'https://github.com/thebusinesstoolkitdev/google-reviews-cpt/',
@@ -30,7 +28,6 @@ $myUpdateChecker = PucFactory::buildUpdateChecker(
 
 // Set the branch for updates
 $myUpdateChecker->setBranch('main');
-*/
 class Google_Reviews_CPT {
     
     private $post_type = 'google_review';
@@ -424,6 +421,7 @@ register_deactivation_hook(__FILE__, function() {
     flush_rewrite_rules();
 
 });
+
 
 
 
