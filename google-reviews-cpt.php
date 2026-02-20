@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Google Reviews to CPT
  * Plugin URI: https://github.com/thebusinesstoolkitdev/google-reviews-cpt
- * Description: Fetches Google reviews via API and stores them as Custom Post Types. Stores review text in a WYSIWYG custom field for better page builder compatibility. Uses dual-fetch on Legacy API to capture up to 10 reviews.
- * Version: 1.4.0
+ * Description: Fetches Google reviews via API and stores them as Custom Post Types. Includes Review Source taxonomy with platform icons (Google, Facebook, Zillow, Yelp, etc). Uses dual-fetch on Legacy API to capture up to 10 reviews.
+ * Version: 1.5.0
  * Author: The Business Toolkit
  * Author URI: https://www.thebusinesstoolkit.com/
  * License: GPL v2 or later
@@ -47,6 +47,7 @@ class Google_Reviews_CPT {
     
     public function __construct() {
         add_action('init', array($this, 'register_cpt'));
+        add_action('init', array($this, 'register_taxonomy'));
         add_action('admin_menu', array($this, 'add_settings_page'));
         add_action('admin_init', array($this, 'register_settings'));
         
@@ -71,6 +72,9 @@ class Google_Reviews_CPT {
         // WYSIWYG Meta Box
         add_action('add_meta_boxes', array($this, 'add_review_meta_box'));
         add_action('save_post', array($this, 'save_review_meta_data'));
+        
+        // Admin styles for source icons
+        add_action('admin_head', array($this, 'admin_column_styles'));
     }
     
     /**
@@ -93,19 +97,199 @@ class Google_Reviews_CPT {
         
         $args = array(
             'labels' => $labels,
-            'public' => true,
-            'has_archive' => true,
-            'publicly_queryable' => true,
+            'public' => false,
+            'has_archive' => false,
+            'publicly_queryable' => false,
             'show_ui' => true,
             'show_in_menu' => true,
             'show_in_rest' => true,
             'menu_icon' => 'dashicons-star-filled',
             'supports' => array('title', 'custom-fields'), 
-            'rewrite' => array('slug' => 'reviews'),
+            'rewrite' => false,
             'capability_type' => 'post',
+            'exclude_from_search' => true,
         );
         
         register_post_type($this->post_type, $args);
+    }
+
+    /**
+     * Register the Review Source taxonomy
+     */
+    public function register_taxonomy() {
+        $labels = array(
+            'name'              => 'Review Sources',
+            'singular_name'     => 'Review Source',
+            'search_items'      => 'Search Sources',
+            'all_items'         => 'All Sources',
+            'edit_item'         => 'Edit Source',
+            'update_item'       => 'Update Source',
+            'add_new_item'      => 'Add New Source',
+            'new_item_name'     => 'New Source Name',
+            'menu_name'         => 'Sources',
+        );
+        
+        register_taxonomy('review_source', $this->post_type, array(
+            'labels'            => $labels,
+            'hierarchical'      => true,
+            'public'            => false,
+            'show_ui'           => true,
+            'show_in_rest'      => true,
+            'show_admin_column' => true,
+            'rewrite'           => false,
+        ));
+        
+        // Create default sources on first run
+        $this->maybe_create_default_sources();
+    }
+    
+    /**
+     * Create default review source terms with icons (runs once)
+     */
+    private function maybe_create_default_sources() {
+        if (get_option('grcp_default_sources_created')) {
+            return;
+        }
+        
+        $sources = array(
+            'google'       => 'Google',
+            'facebook'     => 'Facebook',
+            'zillow'       => 'Zillow',
+            'yelp'         => 'Yelp',
+            'homeadvisor'  => 'HomeAdvisor',
+            'bbb'          => 'BBB',
+            'thumbtack'    => 'Thumbtack',
+            'tripadvisor'  => 'TripAdvisor',
+            'realtor'      => 'Realtor.com',
+            'angi'         => 'Angi',
+        );
+        
+        foreach ($sources as $slug => $name) {
+            if (!term_exists($slug, 'review_source')) {
+                $result = wp_insert_term($name, 'review_source', array('slug' => $slug));
+                if (!is_wp_error($result)) {
+                    // Store the slug as icon key in term meta
+                    update_term_meta($result['term_id'], 'source_icon_key', $slug);
+                }
+            }
+        }
+        
+        update_option('grcp_default_sources_created', true);
+    }
+    
+    /**
+     * Get SVG icon for a review source
+     * Returns inline SVG markup for the given source slug
+     */
+    public static function get_source_icon($slug, $size = 20) {
+        $icons = self::get_source_icons();
+        
+        if (isset($icons[$slug])) {
+            return $icons[$slug];
+        }
+        
+        // Fallback: generic review icon
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="' . $size . '" height="' . $size . '" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+    }
+    
+    /**
+     * All bundled SVG icons keyed by source slug
+     * Simple, recognizable, brand-colored icons
+     */
+    public static function get_source_icons() {
+        return array(
+            'google' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
+                <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+                <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+                <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+                <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.001-.001 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+            </svg>',
+            
+            'facebook' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
+                <path fill="#1877F2" d="M24 4C12.954 4 4 12.954 4 24s8.954 20 20 20 20-8.954 20-20S35.046 4 24 4z"/>
+                <path fill="#fff" d="M26.572 29.036h4.917l.772-5.014h-5.689v-2.849c0-2.075.68-3.915 2.621-3.915h3.108V13.07c-.547-.073-1.704-.236-3.882-.236-4.559 0-7.235 2.405-7.235 7.88v3.308h-4.726v5.014h4.726V43.67c.94.14 1.893.23 2.869.23.882 0 1.745-.072 2.596-.191V29.036z"/>
+            </svg>',
+            
+            'zillow' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
+                <rect fill="#006AFF" width="48" height="48" rx="8"/>
+                <path fill="#fff" d="M34 18.5L24 12 14 18.5v2l10-6.5 10 6.5v-2zm0 3L24 15 14 21.5V34h7v-8h6v8h7V21.5z"/>
+            </svg>',
+            
+            'yelp' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
+                <rect fill="#D32323" width="48" height="48" rx="8"/>
+                <path fill="#fff" d="M22.3 28.4l-5.6 3.2c-.6.3-1.2-.2-1.1-.9l1-6.4c.1-.4.3-.7.7-.8l5.2-2.2c.7-.3 1.4.3 1.2 1l-1.4 6.1zm2.2-4.8l-2.3-6c-.3-.7.3-1.3 1-1.2l6.4.9c.4.1.7.3.8.7l2.3 5.2c.3.7-.3 1.4-1 1.2l-7.2-1.8zM21 15.8l3.3-5.5c.4-.6 1.2-.4 1.3.3l.7 6.4c0 .4-.1.8-.4 1l-4.3 3.7c-.5.5-1.4.1-1.3-.6l.7-5.3z"/>
+            </svg>',
+            
+            'homeadvisor' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
+                <rect fill="#F68B1E" width="48" height="48" rx="8"/>
+                <path fill="#fff" d="M24 12L10 24h4v12h8v-8h4v8h8V24h4L24 12z"/>
+            </svg>',
+            
+            'bbb' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
+                <rect fill="#005A78" width="48" height="48" rx="8"/>
+                <text x="24" y="30" font-family="Arial,sans-serif" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">BBB</text>
+            </svg>',
+            
+            'thumbtack' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
+                <rect fill="#009FD9" width="48" height="48" rx="8"/>
+                <path fill="#fff" d="M24 10c-1.1 0-2 .9-2 2v14l-6 8h6v4c0 1.1.9 2 2 2s2-.9 2-2v-4h6l-6-8V12c0-1.1-.9-2-2-2z"/>
+            </svg>',
+            
+            'tripadvisor' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
+                <rect fill="#34E0A1" width="48" height="48" rx="8"/>
+                <circle cx="16" cy="26" r="5" fill="none" stroke="#000" stroke-width="2"/>
+                <circle cx="32" cy="26" r="5" fill="none" stroke="#000" stroke-width="2"/>
+                <circle cx="16" cy="26" r="2" fill="#000"/>
+                <circle cx="32" cy="26" r="2" fill="#000"/>
+                <path d="M14 18h20M24 14l-3 4h6l-3-4" fill="none" stroke="#000" stroke-width="2"/>
+            </svg>',
+            
+            'realtor' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
+                <rect fill="#D92228" width="48" height="48" rx="8"/>
+                <text x="24" y="31" font-family="Arial,sans-serif" font-size="18" font-weight="bold" fill="#fff" text-anchor="middle">R</text>
+            </svg>',
+            
+            'angi' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
+                <rect fill="#FF6153" width="48" height="48" rx="8"/>
+                <text x="24" y="30" font-family="Arial,sans-serif" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">angi</text>
+            </svg>',
+        );
+    }
+    
+    /**
+     * Get the source icon HTML for a given post
+     */
+    public function get_post_source_icon($post_id) {
+        $terms = wp_get_post_terms($post_id, 'review_source');
+        
+        if (empty($terms) || is_wp_error($terms)) {
+            return '';
+        }
+        
+        $term = $terms[0];
+        $icon_key = get_term_meta($term->term_id, 'source_icon_key', true);
+        
+        if (!$icon_key) {
+            $icon_key = $term->slug;
+        }
+        
+        $icon = self::get_source_icon($icon_key);
+        return '<span class="grcp-source-icon" title="' . esc_attr($term->name) . '">' . $icon . '</span>';
+    }
+    
+    /**
+     * Admin column styles for source icons
+     */
+    public function admin_column_styles() {
+        $screen = get_current_screen();
+        if (!$screen || $screen->post_type !== $this->post_type) {
+            return;
+        }
+        echo '<style>
+            .grcp-source-icon { display: inline-flex; align-items: center; }
+            .grcp-source-icon svg { vertical-align: middle; border-radius: 3px; }
+            .column-review_source { width: 80px; }
+        </style>';
     }
 
     /**
@@ -349,7 +533,13 @@ class Google_Reviews_CPT {
                 <li><strong>Custom Field <code>review_date</code>:</strong> Review Date (Y-m-d H:i:s)</li>
                 <li><strong>Custom Field <code>review_timestamp</code>:</strong> Unix Timestamp</li>
                 <li><strong>Custom Field <code>reviewer_photo_url</code>:</strong> Reviewer Photo URL</li>
+                <li><strong>Taxonomy <code>review_source</code>:</strong> Platform (Google, Facebook, Zillow, etc.)</li>
             </ul>
+            
+            <h3>Review Sources</h3>
+            <p>Each review has a <strong>Source</strong> taxonomy (Google Reviews → Sources). API-synced reviews are auto-tagged as "Google". Manually added reviews can be tagged with any source: Facebook, Zillow, Yelp, HomeAdvisor, BBB, Thumbtack, TripAdvisor, Realtor.com, or Angi.</p>
+            <p><strong>Source Icons:</strong> Each platform has a built-in SVG icon. Use the taxonomy in your page builder to display the icon alongside reviews. You can also add custom sources via the Sources taxonomy screen.</p>
+            <p><strong>PHP Helper:</strong> <code>Google_Reviews_CPT::get_source_icon('google')</code> returns the SVG icon markup for any source slug.</p>
             
             <h3>Quick Start</h3>
             <ul>
@@ -627,6 +817,11 @@ class Google_Reviews_CPT {
                 $review_id = 'google_' . md5($author_name . '_' . $time . '_' . substr($text, 0, 100));
             }
             
+            // Skip reviews below minimum rating (4 stars)
+            if (intval($rating) < 4) {
+                continue;
+            }
+            
             // Check if review already exists (any status to prevent duplicates)
             $existing = get_posts(array(
                 'post_type' => $this->post_type,
@@ -676,6 +871,9 @@ class Google_Reviews_CPT {
                 update_post_meta($post_id, 'reviewer_photo_url', esc_url_raw($photo_url));
                 update_post_meta($post_id, 'review_timestamp', intval($time));
                 
+                // Auto-assign "Google" source taxonomy
+                wp_set_object_terms($post_id, 'google', 'review_source');
+                
                 $new_count++;
             }
         }
@@ -690,6 +888,7 @@ class Google_Reviews_CPT {
         $new_columns = array();
         $new_columns['cb'] = $columns['cb'];
         $new_columns['title'] = 'Reviewer';
+        $new_columns['review_source'] = 'Source';
         $new_columns['rating'] = 'Rating';
         $new_columns['review_text'] = 'Review';
         $new_columns['review_date'] = 'Review Date';
@@ -703,6 +902,9 @@ class Google_Reviews_CPT {
      */
     public function display_custom_columns($column, $post_id) {
         switch ($column) {
+            case 'review_source':
+                echo $this->get_post_source_icon($post_id);
+                break;
             case 'rating':
                 $rating = get_post_meta($post_id, 'review_rating', true);
                 if ($rating) {
@@ -732,6 +934,10 @@ new Google_Reviews_CPT();
 
 // Activation — schedule cron if credentials exist
 register_activation_hook(__FILE__, function() {
+    // Ensure CPT and taxonomy are registered before flushing
+    $plugin = new Google_Reviews_CPT();
+    $plugin->register_cpt();
+    $plugin->register_taxonomy();
     flush_rewrite_rules();
     
     $api_key = get_option('google_reviews_api_key');
