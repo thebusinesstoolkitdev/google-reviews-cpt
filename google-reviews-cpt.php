@@ -99,7 +99,7 @@ class Google_Reviews_CPT {
             'labels' => $labels,
             'public' => false,
             'has_archive' => false,
-            'publicly_queryable' => false,
+            'publicly_queryable' => true,
             'show_ui' => true,
             'show_in_menu' => true,
             'show_in_rest' => true,
