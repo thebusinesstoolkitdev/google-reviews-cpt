@@ -3,7 +3,7 @@
  * Plugin Name: Google Reviews to CPT
  * Plugin URI: https://github.com/thebusinesstoolkitdev/google-reviews-cpt
  * Description: Fetches Google reviews via API and stores them as Custom Post Types. Includes Review Source taxonomy with platform icons (Google, Facebook, Zillow, Yelp, etc). Uses dual-fetch on Legacy API to capture up to 10 reviews.
- * Version: 1.6.0
+ * Version: 1.6.1
  * Author: The Business Toolkit
  * Author URI: https://www.thebusinesstoolkit.com/
  * License: GPL v2 or later
@@ -50,6 +50,7 @@ class Google_Reviews_CPT {
 
         add_action( 'fetch_google_reviews_event', array( $this, 'fetch_and_store_reviews' ) );
         add_action( 'admin_post_sync_google_reviews', array( $this, 'manual_sync' ) );
+        add_action( 'wp_ajax_grcp_lookup_place', array( $this, 'lookup_place_ajax' ) );
 
         add_filter( 'manage_' . $this->post_type . '_posts_columns', array( $this, 'add_custom_columns' ) );
         add_action( 'manage_' . $this->post_type . '_posts_custom_column', array( $this, 'display_custom_columns' ), 10, 2 );
@@ -428,8 +429,90 @@ class Google_Reviews_CPT {
 
     public function place_id_callback() {
         $place_id = get_option( 'google_reviews_place_id', '' );
-        echo '<input type="text" name="google_reviews_place_id" value="' . esc_attr( $place_id ) . '" class="regular-text" />';
-        echo '<p class="description">The Place ID of your business. <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank">Find your Place ID</a></p>';
+        $nonce    = wp_create_nonce( 'grcp_lookup_place' );
+
+        echo '<input type="text" id="grcp_place_id" name="google_reviews_place_id" value="' . esc_attr( $place_id ) . '" class="regular-text" />';
+        echo '<p class="description">Paste a known Place ID above, or use the search tool below to find it by business name.</p>';
+        ?>
+        <div style="margin-top:12px;padding:14px 16px;background:#f6f7f7;border:1px solid #dcdcde;border-radius:4px;max-width:500px;">
+            <p style="margin:0 0 4px;font-weight:600;">&#128269; Find Place ID by business name</p>
+            <p style="margin:0 0 10px;" class="description">Works for online businesses, service-area businesses, and any business without a precise map pin.</p>
+            <div style="display:flex;gap:8px;">
+                <input type="text" id="grcp_place_search" placeholder="e.g. The Business Toolkit Melbourne" class="regular-text" style="flex:1;margin:0;" />
+                <button type="button" id="grcp_place_search_btn" class="button button-secondary">Search</button>
+            </div>
+            <div id="grcp_place_results" style="margin-top:10px;"></div>
+        </div>
+        <script>
+        (function () {
+            var btn     = document.getElementById('grcp_place_search_btn');
+            var input   = document.getElementById('grcp_place_search');
+            var results = document.getElementById('grcp_place_results');
+            var field   = document.getElementById('grcp_place_id');
+
+            function doSearch() {
+                var query = input.value.trim();
+                if (!query) { return; }
+
+                btn.disabled    = true;
+                btn.textContent = 'Searching…';
+                results.innerHTML = '';
+
+                var body = new FormData();
+                body.append('action', 'grcp_lookup_place');
+                body.append('nonce',  '<?php echo esc_js( $nonce ); ?>');
+                body.append('query',  query);
+
+                fetch(ajaxurl, { method: 'POST', body: body })
+                    .then(function (r) { return r.json(); })
+                    .then(function (resp) {
+                        btn.disabled    = false;
+                        btn.textContent = 'Search';
+
+                        if (!resp.success) {
+                            results.innerHTML = '<p style="color:#d63638;margin:4px 0 0;">⚠ ' + resp.data + '</p>';
+                            return;
+                        }
+
+                        var items = resp.data.results;
+                        if (!items.length) {
+                            results.innerHTML = '<p style="color:#72777c;margin:4px 0 0;">No businesses found. Try adding a city or country to your search.</p>';
+                            return;
+                        }
+
+                        var html = '<p style="margin:0 0 6px;font-size:12px;color:#72777c;">Click a result to use its Place ID:</p><ul style="margin:0;padding:0;list-style:none;">';
+                        items.forEach(function (r) {
+                            html += '<li style="padding:9px 11px;background:#fff;border:1px solid #dcdcde;border-radius:3px;margin-bottom:4px;cursor:pointer;" data-id="' + r.place_id + '" onmouseover="this.style.background=\'#f0f6fc\'" onmouseout="this.style.background=\'#fff\'">'
+                                  + '<strong>' + r.name + '</strong>'
+                                  + '<br><span style="font-size:12px;color:#72777c;">' + r.address + '</span>'
+                                  + '<br><code style="font-size:11px;color:#50575e;">' + r.place_id + '</code>'
+                                  + '</li>';
+                        });
+                        html += '</ul>';
+                        results.innerHTML = html;
+
+                        results.querySelectorAll('li[data-id]').forEach(function (li) {
+                            li.addEventListener('click', function () {
+                                var id = this.getAttribute('data-id');
+                                field.value = id;
+                                results.innerHTML = '<p style="color:#00a32a;margin:4px 0 0;">&#10003; Place ID set to <code>' + id + '</code>. Click <strong>Save Changes</strong> to save.</p>';
+                            });
+                        });
+                    })
+                    .catch(function () {
+                        btn.disabled    = false;
+                        btn.textContent = 'Search';
+                        results.innerHTML = '<p style="color:#d63638;margin:4px 0 0;">Request failed — please try again.</p>';
+                    });
+            }
+
+            btn.addEventListener('click', doSearch);
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
+            });
+        })();
+        </script>
+        <?php
     }
 
     public function sync_frequency_callback() {
@@ -726,6 +809,66 @@ class Google_Reviews_CPT {
             ), admin_url( 'edit.php' ) ) );
         }
         exit;
+    }
+
+    /**
+     * AJAX handler: search for a Place ID by business name using findplacefromtext.
+     * Works for online businesses, service-area businesses, and any business without a map pin.
+     */
+    public function lookup_place_ajax() {
+        check_ajax_referer( 'grcp_lookup_place', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( 'Unauthorized.' );
+        }
+
+        $query   = isset( $_POST['query'] ) ? sanitize_text_field( $_POST['query'] ) : '';
+        $api_key = get_option( 'google_reviews_api_key' );
+
+        if ( ! $query ) {
+            wp_send_json_error( 'Please enter a business name to search.' );
+        }
+        if ( ! $api_key ) {
+            wp_send_json_error( 'No API key saved yet — add your Google API key above and save first.' );
+        }
+
+        $url = add_query_arg( array(
+            'input'     => $query,
+            'inputtype' => 'textquery',
+            'fields'    => 'place_id,name,formatted_address',
+            'key'       => $api_key,
+        ), 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json' );
+
+        $response = wp_remote_get( $url, array( 'timeout' => 15 ) );
+
+        if ( is_wp_error( $response ) ) {
+            wp_send_json_error( $response->get_error_message() );
+        }
+
+        $data = json_decode( wp_remote_retrieve_body( $response ), true );
+
+        if ( isset( $data['status'] ) && ! in_array( $data['status'], array( 'OK', 'ZERO_RESULTS' ), true ) ) {
+            $msg = isset( $data['error_message'] ) ? $data['error_message'] : 'API error: ' . $data['status'];
+            wp_send_json_error( $msg );
+        }
+
+        if ( empty( $data['candidates'] ) ) {
+            wp_send_json_success( array(
+                'results' => array(),
+                'message' => 'No businesses found. Try adding a city, state, or country to your search.',
+            ) );
+        }
+
+        $results = array();
+        foreach ( $data['candidates'] as $candidate ) {
+            $results[] = array(
+                'place_id' => sanitize_text_field( $candidate['place_id'] ),
+                'name'     => isset( $candidate['name'] ) ? sanitize_text_field( $candidate['name'] ) : 'Unknown',
+                'address'  => isset( $candidate['formatted_address'] ) ? sanitize_text_field( $candidate['formatted_address'] ) : 'No address listed',
+            );
+        }
+
+        wp_send_json_success( array( 'results' => $results ) );
     }
 
     public function fetch_and_store_reviews() {
