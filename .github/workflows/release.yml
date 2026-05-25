@@ -1,0 +1,30 @@
+name: Package Plugin for Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build ZIP with correct folder name
+        run: |
+          mkdir -p /tmp/google-reviews-cpt
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            ./ /tmp/google-reviews-cpt/
+          cd /tmp
+          zip -r google-reviews-cpt.zip google-reviews-cpt/
+
+      - name: Attach ZIP to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: /tmp/google-reviews-cpt.zip
