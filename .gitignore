@@ -1,0 +1,15 @@
+# WordPress
+*.log
+wp-config.php
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# Do NOT ignore plugin-update-checker — it must ship with the plugin
+# !plugin-update-checker/
